@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip Itinerary Planner</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+      --primary: #1a237e; 
+      --accent: #3949ab; 
+      --success: #27ae60; 
+      --card-bg: rgba(255, 255, 255, 0.98); 
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif; margin: 0;
+      /* Background changed to a peaceful green mountain landscape */
+      background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80');
+      background-size: cover; background-attachment: fixed; min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+    }
+
+    .container { 
+      background: var(--card-bg); padding: 40px; border-radius: 20px; 
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4); width: 95%; max-width: 1100px; 
+      margin: 20px;
+    }
+
+    .auth-grid { display: flex; align-items: stretch; gap: 0; margin-top: 20px; }
+    .auth-col { flex: 1; padding: 0 40px; }
+    .divider-line { width: 2px; background: #eee; margin: 10px 0; }
+    
+    label, .label-text { font-weight: 600; font-size: 14px; color: #333; display: block; margin-top: 15px; }
+    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; }
+    
+    .planner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .map-box { border-radius: 15px; overflow: hidden; border: 1px solid #ddd; height: 320px; margin-top: 15px; }
+    
+    button.primary-btn { background: var(--primary); color: white; font-weight: 600; border: none; cursor: pointer; }
+    button.success-btn { background: var(--success); color: white; font-weight: 600; border: none; cursor: pointer; }
+
+    #itineraryPortal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f4f7f6; z-index: 2000; overflow-y: auto; padding: 30px; }
+    .portal-inner { max-width: 900px; margin: 0 auto; }
+    
+    .pdf-header { 
+      position: sticky; top: 0; background: #f4f7f6; padding: 15px 0; 
+      z-index: 2001; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .big-download-btn { 
+      background: #27ae60 !important; color: white !important; font-size: 1.1em !important; 
+      padding: 12px 30px !important; width: auto !important; cursor: pointer;
+    }
+
+    .day-card { 
+      background: white; border-radius: 15px; margin: 30px 0; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 10px solid var(--primary); 
+    }
+    .day-card h3 { padding: 20px; margin: 0; background: #f8f9fa; color: var(--primary); border-bottom: 1px solid #eee; }
+    .time-slot { display: grid; grid-template-columns: 120px 1fr; padding: 15px 20px; border-bottom: 1px solid #f0f0f0; }
+    
+    .period-label {
+      color: #000;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .budget-summary-box { background: var(--primary); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; margin-bottom: 20px;}
+    .day-budget-bar { background: #f1f8e9; padding: 15px 20px; display: grid; grid-template-columns: 1fr 1fr; font-size: 13px; }
+    .shopping-highlight { background: #e8f5e9; padding: 10px 20px; text-align: center; color: var(--success); font-weight: bold; border-top: 1px solid #c8e6c9; }
+    .weather-backup-box { background: #fff3e0; padding: 15px 20px; font-size: 13px; border-left: 5px solid #ffb74d; display: flex; align-items: center; gap: 10px; }
+    
+    .offline-map-link {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #555;
+        text-align: center;
+    }
+    .offline-map-link a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: bold;
+        margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="authSection" class="container">
+    <h1 style="text-align:center;">🌍 Trip Itinerary Planner</h1>
+    <div class="auth-grid">
+      <div class="auth-col">
+        <span class="label-text">Username:</span>
+        <input type="text" id="loginUser" placeholder="Enter username">
+        <span class="label-text">Password:</span>
+        <input type="password" id="loginPass" placeholder="Enter password">
+        <button class="primary-btn" onclick="login()">Login</button>
+      </div>
+      <div class="divider-line"></div>
+      <div class="auth-col">
+        <span class="label-text">New Username:</span>
+        <input type="text" id="signupUser" placeholder="New Username">
+        <span class="label-text">New Password:</span>
+        <input type="password" id="signupPass" placeholder="New Password">
+        <button class="success-btn" style="background-color: #8e44ad;" onclick="signup()">Sign Up</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="planner" class="container" style="display:none;">
+    <div style="display:flex; justify-content: space-between; align-items: center;">
+        <h2 id="welcome" style="margin:0">Namaste!</h2>
+        <button onclick="logout()" style="width:auto; padding:8px 20px; background:#666; color:white; border:none; border-radius:8px; cursor:pointer;">Logout</button>
+    </div>
+
+    <div class="planner-grid">
+      <div>
+        <label>📅 Travel Dates</label>
+        <div style="display:flex; gap:10px">
+            <input type="date" id="startDate" value="2026-02-10">
+            <input type="date" id="endDate" value="2026-02-14">
+        </div>
+        
+        <label>📍 Search Any Indian State / City</label>
+        <input type="text" id="location" placeholder="e.g. Delhi, Mumbai, Kerala" oninput="updateUI()">
+        
+        <div class="map-box">
+            <iframe id="mapFrame" width="100%" height="100%" frameborder="0" src="about:blank"></iframe>
+        </div>
+        <div class="offline-map-link">
+            <span>📲 Download offline maps for this trip:</span><br>
+            <a href="https://play.google.com/store/apps/details?id=net.psyberia.offlinemaps" target="_blank">Android</a> | 
+            <a href="https://apps.apple.com/app/id510623322" target="_blank">iOS (Apple)</a>
+        </div>
+      </div>
+
+      <div>
+        <label>🏨 Hotel Standard</label>
+        <select id="hotelStandard" onchange="updateUI()">
+            <option value="luxury">Luxury (5-Star)</option>
+            <option value="boutique">Boutique (4-Star)</option>
+            <option value="economy">Economy (3-Star)</option>
+        </select>
+
+        <label>🛋️ Recommended Hotel</label>
+        <input type="text" id="recHotel" readonly style="background:#f0f2f5; font-weight:bold; color:var(--accent)" placeholder="Auto-suggested hotel">
+
+        <label>🚗 Transport Mode</label>
+        <select id="transportMode">
+            <option>Private SUV/Sedan</option>
+            <option>Local Taxi / Auto</option>
+            <option>Public Transport (Metro/Bus)</option>
+        </select>
+
+        <label>🎯 Primary Activity</label>
+        <select id="primaryActivity">
+            <option>Historical Exploration</option>
+            <option>Nature & Wellness</option>
+            <option>Adventure & Beach</option>
+            <option>Shopping & Food</option>
+        </select>
+
+        <label>💰 Total Budget for Trip (INR)</label>
+        <input type="number" id="budget" value="20000">
+
+        <button class="primary-btn" style="margin-top:20px; padding:18px;" onclick="generateItinerary()">✨ Generate Smart Itinerary</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="itineraryPortal">
+    <div class="portal-inner">
+      <div class="pdf-header">
+        <button onclick="closePortal()" style="width:auto; background:#e74c3c; color:white; padding:10px 25px; border:none; border-radius:8px; cursor:pointer;">← Back to Editor</button>
+        <button onclick="downloadPDF()" class="big-download-btn">📥 DOWNLOAD PDF ITINERARY</button>
+      </div>
+      
+      <div id="downloadArea">
+          <h1 style="text-align:center; color:var(--primary); font-family:'Playfair Display';">Customized Travel Roadmap</h1>
+          <div id="summaryBar" class="budget-summary-box"></div>
+          <div id="itineraryContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var users = { "varun": "varun@50" };
+
+    const destinationData = {
+        "hyderabad": {
+            luxury: "Taj Falaknuma Palace", boutique: "ITC Kohenur", economy: "Red Fox Hotel",
+            backups: ["Inorbit Mall shopping", "Prasad's Large Screen Indoor Complex", "Salar Jung Museum Galleries", "Indoor PVR cinemas", "Birla Planetarium (Indoor)"],
+            dailyPlans: [
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Charminar & Makkah Masjid" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Paradise Biryani + Salar Jung Museum" },
+                    { time: "05:30 PM", period: "Evening", act: "Chowmahalla Palace & Shopping" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Nimrah Cafe" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Golconda Fort Trek" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Qutub Shahi Tombs" },
+                    { time: "05:30 PM", period: "Evening", act: "Hussain Sagar Lake & Buddha Statue" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Eat Street" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Ramoji Film City Full Day Tour" },
+                    { time: "02:30 PM", period: "Afternoon", act: "Film City Studio Tours" },
+                    { time: "06:30 PM", period: "Evening", act: "Closing Ceremony at Ramoji" },
+                    { time: "09:30 PM", period: "Night", act: "Late Dinner near LB Nagar" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Birla Mandir & Planetarium" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Shilparamam Arts & Crafts Village" },
+                    { time: "05:30 PM", period: "Evening", act: "IKEA Store Visit & Hi-Tech City Walk" },
+                    { time: "09:00 PM", period: "Night", act: "Pub Crawl in Jubilee Hills" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Nehru Zoological Park" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Sudha Car Museum" },
+                    { time: "05:30 PM", period: "Evening", act: "Lumbini Park Laser Show" },
+                    { time: "09:00 PM", period: "Night", act: "Farewell Dinner at Bawarchi" }
+                ]
+            ]
+        },
+        "delhi": {
+            luxury: "Taj Palace", boutique: "The Claridges", economy: "Bloomrooms @ Janpath",
+            backups: ["Select Citywalk Mall", "National Museum Exploration", "DLF Emporio Luxury Walk", "Indoor Lunch at Connaught Place", "Crafts Museum (Indoor Sections)"],
+            dailyPlans: [
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Red Fort & Jama Masjid" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Chandni Chowk Food Walk" },
+                    { time: "05:30 PM", period: "Evening", act: "Raj Ghat & India Gate" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Karim's" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Qutub Minar Complex" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Lotus Temple & Mehrauli" },
+                    { time: "05:30 PM", period: "Evening", act: "Hauz Khas Village Sunset" },
+                    { time: "09:00 PM", period: "Night", act: "Cafe Hopping in HKV" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Humayun's Tomb" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Sunder Nursery & Lodhi Garden" },
+                    { time: "05:30 PM", period: "Evening", act: "Khan Market Shopping" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Pandara Road" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Akshardham Temple" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Waste to Wonder Park" },
+                    { time: "05:30 PM", period: "Evening", act: "Connaught Place (CP) Exploration" },
+                    { time: "09:00 PM", period: "Night", act: "Live Music at Janpath" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Dilli Haat INA" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Safdarjung Tomb" },
+                    { time: "05:30 PM", period: "Evening", act: "Sarojini Nagar Market Shopping" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Cyber Hub (Gurgaon)" }
+                ]
+            ]
+        },
+        "mumbai": {
+            luxury: "The Taj Mahal Palace", boutique: "Marine Plaza", economy: "Hotel Suba International",
+            backups: ["Phoenix Palladium Mall", "Jehangir Art Gallery", "Indoor High Tea at Taj", "Chhatrapati Shivaji Museum", "Nehru Planetarium (Indoor)"],
+            dailyPlans: [
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Gateway of India & Colaba Causeway" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Leopold Cafe & Marine Drive Walk" },
+                    { time: "05:30 PM", period: "Evening", act: "Girgaon Chowpatty Sunset" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Bademiya" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Elephanta Caves (Ferry Ride)" },
+                    { time: "02:00 PM", period: "Afternoon", act: "Prince of Wales Museum" },
+                    { time: "06:00 PM", period: "Evening", act: "Siddhivinayak Temple" },
+                    { time: "09:00 PM", period: "Night", act: "Late Night Drive - Sea Link" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Bandra Fort & Mount Mary Church" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Bandra Linking Road Shopping" },
+                    { time: "05:30 PM", period: "Evening", act: "Juhu Beach & Street Food" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner near Prithvi Theatre" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Sanjay Gandhi National Park" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Kanheri Caves Exploration" },
+                    { time: "05:30 PM", period: "Evening", act: "Global Vipassana Pagoda" },
+                    { time: "09:00 PM", period: "Night", act: "Relax at Gorai Beach" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Chor Bazaar & Crawford Market" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Dhobi Ghat Viewpoint" },
+                    { time: "05:30 PM", period: "Evening", act: "Worli Sea Face Walk" },
+                    { time: "09:00 PM", period: "Night", act: "Farewell Dinner at Mahesh Lunch Home" }
+                ]
+            ]
+        },
+        "goa": {
+            luxury: "Taj Exotica Resort", boutique: "Hard Rock Hotel", economy: "Zostel Goa",
+            backups: ["Houses of Goa Museum", "Casino Cruise (Indoor)", "Museum of Christian Art", "Shopping at Panjim Market", "Boutique Indoor Dining"],
+            dailyPlans: [
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Baga & Calangute Beach" },
+                    { time: "01:00 PM", period: "Afternoon", act: "Shack Lunch & Water Sports" },
+                    { time: "05:00 PM", period: "Evening", act: "Aguada Fort Sunset" },
+                    { time: "08:00 PM", period: "Night", act: "Party at Tito's Lane" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Old Goa Churches (Basilica of Bom Jesus)" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Mangueshi Temple" },
+                    { time: "05:30 PM", period: "Evening", act: "Dona Paula Viewpoint" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner in Panjim Fontainhas" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "South Goa: Colva & Palolem Beach" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Cabo de Rama Fort" },
+                    { time: "05:30 PM", period: "Evening", act: "Silent Noise Disco (Palolem)" },
+                    { time: "09:00 PM", period: "Night", act: "Beachside Candlelight Dinner" }
+                ],
+                [
+                    { time: "08:00 AM", period: "Morning", act: "Dudhsagar Falls Trek" },
+                    { time: "02:00 PM", period: "Afternoon", act: "Spice Plantation Tour & Lunch" },
+                    { time: "06:00 PM", period: "Evening", act: "River Mandovi Cruise" },
+                    { time: "09:00 PM", period: "Night", act: "Casino Night in Panjim" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Anjuna Flea Market" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Vagator Beach & Chapora Fort" },
+                    { time: "05:30 PM", period: "Evening", act: "Sunset at Thalassa" },
+                    { time: "09:00 PM", period: "Night", act: "Relax at Curlies Beach Shack" }
+                ]
+            ]
+        },
+        "kerala": {
+            luxury: "The Leela Kovalam", boutique: "Fragrant Nature Munnar", economy: "Zostel Alleppey",
+            backups: ["Lulu Mall (Kochi)", "Ayurvedic Spa Session", "Tea Museum Tour", "Kathakali Indoor Performance", "Jewish Synagogue Visit"],
+            dailyPlans: [
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Munnar Tea Garden Tour" },
+                    { time: "01:00 PM", period: "Afternoon", act: "Eravikulam National Park" },
+                    { time: "05:00 PM", period: "Evening", act: "Kathakali Performance" },
+                    { time: "08:00 PM", period: "Night", act: "Traditional Sadhya Dinner" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Mattupetty Dam & Eco Point" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Tea Museum Exploration" },
+                    { time: "05:30 PM", period: "Evening", act: "Kalaripayattu Martial Arts Show" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Munnar Town" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Drive to Thekkady (Periyar)" },
+                    { time: "02:00 PM", period: "Afternoon", act: "Boating in Periyar Lake" },
+                    { time: "05:30 PM", period: "Evening", act: "Elephant Junction Visit" },
+                    { time: "09:00 PM", period: "Night", act: "Spice Shopping in Kumily" }
+                ],
+                [
+                    { time: "09:00 AM", period: "Morning", act: "Drive to Alleppey Backwaters" },
+                    { time: "12:30 PM", period: "Afternoon", act: "Houseboat Check-in & Lunch" },
+                    { time: "04:30 PM", period: "Evening", act: "Cruising the Vembanad Lake" },
+                    { time: "08:00 PM", period: "Night", act: "Stay on Houseboat" }
+                ],
+                [
+                    { time: "10:00 AM", period: "Morning", act: "Fort Kochi Walking Tour" },
+                    { time: "01:30 PM", period: "Afternoon", act: "Jewish Synagogue & Dutch Palace" },
+                    { time: "05:30 PM", period: "Evening", act: "Chinese Fishing Nets Sunset" },
+                    { time: "09:00 PM", period: "Night", act: "Dinner at Princess Street" }
+                ]
+            ]
+        }
+    };
+
+    function login() {
+      let u = document.getElementById("loginUser").value;
+      let p = document.getElementById("loginPass").value;
+      if (users[u] && users[u] === p) {
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("planner").style.display = "block";
+        document.getElementById("welcome").innerHTML = "Namaste, " + u + "!";
+      } else { alert("Invalid login"); }
+    }
+
+    function signup() {
+      let u = document.getElementById("signupUser").value;
+      let p = document.getElementById("signupPass").value;
+      if (u && p) { users[u] = p; alert("Account created!"); }
+    }
+
+    function updateUI() {
+        let loc = document.getElementById("location").value.toLowerCase().trim();
+        let std = document.getElementById("hotelStandard").value;
+        if(destinationData[loc]) {
+            document.getElementById("recHotel").value = destinationData[loc][std];
+            document.getElementById("mapFrame").src = "https://www.google.com/maps?q="+encodeURIComponent(loc)+"&output=embed";
+        }
+    }
+
+    function generateItinerary() {
+        let locKey = document.getElementById("location").value.toLowerCase().trim();
+        let totalBudget = parseFloat(document.getElementById("budget").value) || 0;
+        let start = new Date(document.getElementById("startDate").value);
+        let end = new Date(document.getElementById("endDate").value);
+        
+        let diffTime = Math.abs(end - start);
+        let dayCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        if(!destinationData[locKey]) { alert("Please enter Delhi, Mumbai, Kerala, Goa, or Hyderabad"); return; }
+        if(dayCount <= 0) { alert("Please select valid dates"); return; }
+
+        let data = destinationData[locKey];
+        let dailyBudget = totalBudget / dayCount; 
+        
+        document.getElementById("summaryBar").innerHTML = `
+            <span>Trip Duration: ${dayCount} Days</span>
+            <span>Total Budget: ₹${totalBudget}</span>
+            <span>Daily Limit: ₹${dailyBudget.toFixed(0)}</span>
+        `;
+
+        let content = document.getElementById("itineraryContent");
+        content.innerHTML = "";
+
+        for(let d=1; d<=dayCount; d++) {
+            let hotelFood = dailyBudget * 0.45;
+            let transport = dailyBudget * 0.20;
+            let shop = dailyBudget - (hotelFood + transport);
+
+            let dayIndex = (d - 1) % 5;
+            let currentDayPlans = data.dailyPlans[dayIndex];
+            
+            // UNIQUE BACKUP PER DAY: Cycle through the array
+            let backupIndex = (d - 1) % data.backups.length;
+            let dailyBackup = data.backups[backupIndex];
+
+            let dayHtml = `
+                <div class="day-card">
+                    <h3>Day ${d}: ${locKey.charAt(0).toUpperCase() + locKey.slice(1)} Explorer</h3>
+                    ${currentDayPlans.map(p => `
+                        <div class="time-slot">
+                          <b>${p.time}</b>
+                          <span><strong class="period-label">${p.period}:</strong> ${p.act}</span>
+                        </div>
+                    `).join('')}
+                    <div class="day-budget-bar">
+                        <span>🏨 Hotel & Food: ₹${hotelFood.toFixed(0)}</span>
+                        <span>🚕 Local Transport: ₹${transport.toFixed(0)}</span>
+                    </div>
+                    <div class="shopping-highlight">🛍️ Remaining for Shopping: ₹${shop.toFixed(0)}</div>
+                    <div class="weather-backup-box">
+                        <span>🌂</span>
+                        <span><b>Weather Backup:</b> ${dailyBackup}</span>
+                    </div>
+                </div>
+            `;
+            content.innerHTML += dayHtml;
+        }
+
+        document.getElementById("itineraryPortal").style.display = "block";
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('downloadArea');
+      const opt = { 
+          margin: 10, filename: 'My_Trip_Plan.pdf', image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function logout() { location.reload(); }
+    function closePortal() { document.getElementById("itineraryPortal").style.display = "none"; }
+  </script>
+</body>
+</html>
